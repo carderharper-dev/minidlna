@@ -1,72 +1,429 @@
-1.1.0 - Released 00-Month-0000
---------------------------------
-- Add support for other operating systems.
-- Switch to autoconf from our little genconfig.sh.
+bash -lc mkdir -p /mnt/data/spider_swing_game/assets && cp /mnt/data/Gm_big_city.usdz /mnt/data/spider_swing_game/assets/Bay_City.usdz && cp /mnt/data/Spider-Man_Brand_New_Day.usdz /mnt/data/spider_swing_game/assets/Spider-Man_Brand_New_Day.usdz
+cat > /mnt/data/spider_swing_game/index.html <<'EOF'
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Bay City Web Swinger</title>
+  <style>
+    html,body{margin:0;height:100%;overflow:hidden;background:#06101d;color:#fff;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    #myCanvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:linear-gradient(#0a1425,#12314e)}
+    #hud{position:fixed;inset:0;pointer-events:none;user-select:none}
+    .panel{position:absolute;left:18px;top:18px;background:rgba(3,10,20,.66);border:1px solid rgba(255,255,255,.12);box-shadow:0 10px 40px rgba(0,0,0,.3);backdrop-filter:blur(8px);border-radius:14px;padding:14px 16px;line-height:1.35}
+    .title{font-weight:800;letter-spacing:.04em;font-size:14px}
+    .sub{font-size:12px;opacity:.72;margin-top:4px}
+    .controls{margin-top:10px;font-size:12px;opacity:.92}
+    .key{display:inline-block;min-width:18px;padding:2px 5px;margin-right:3px;border:1px solid rgba(255,255,255,.22);border-bottom-color:rgba(255,255,255,.35);border-radius:5px;background:rgba(255,255,255,.07);text-align:center;font-weight:700}
+    #status{position:absolute;right:18px;top:18px;text-align:right}
+    #speed{font-size:24px;font-weight:900;letter-spacing:.04em}
+    #mode{font-size:12px;opacity:.75;margin-top:2px}
+    #center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:10px;height:10px;border:1.5px solid rgba(255,255,255,.9);border-radius:50%;box-shadow:0 0 20px rgba(130,210,255,.45)}
+    #hint{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);background:rgba(3,10,20,.58);padding:9px 13px;border-radius:999px;font-size:12px;opacity:.82}
+    #loading{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(circle at center,rgba(17,50,80,.96),rgba(2,7,14,.99));z-index:20}
+    .loadbox{width:min(520px,88vw);text-align:center}
+    .loadtitle{font-weight:900;font-size:24px;letter-spacing:.03em}
+    .bar{height:8px;border-radius:999px;background:rgba(255,255,255,.12);overflow:hidden;margin-top:16px}
+    #barfill{height:100%;width:0%;background:linear-gradient(90deg,#6ad7ff,#b4f1ff);transition:width .2s}
+    #loadmsg{margin-top:10px;font-size:12px;opacity:.75}
+    #error{display:none;margin-top:14px;padding:10px 12px;text-align:left;background:rgba(255,90,90,.12);border:1px solid rgba(255,120,120,.3);border-radius:10px;font-size:12px;white-space:pre-wrap}
+    body.playing #hint{display:block}
+  </style>
+</head>
+<body>
+  <canvas id="myCanvas"></canvas>
+  <div id="hud">
+    <div class="panel">
+      <div class="title">BAY CITY // WEB SWINGER</div>
+      <div class="sub">3D third-person prototype</div>
+      <div class="controls">
+        <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> move
+        &nbsp; <span class="key">E</span> web
+        &nbsp; <span class="key">Q</span> zip
+        &nbsp; <span class="key">R</span> restart
+      </div>
+    </div>
+    <div id="status">
+      <div id="speed">0 km/h</div>
+      <div id="mode">AIR</div>
+    </div>
+    <div id="center"></div>
+    <div id="hint">Move the mouse to aim • Click to capture the mouse</div>
+  </div>
+  <div id="loading">
+    <div class="loadbox">
+      <div class="loadtitle">Loading Bay City</div>
+      <div class="bar"><div id="barfill"></div></div>
+      <div id="loadmsg">Initializing 3D scene…</div>
+      <div id="error"></div>
+    </div>
+  </div>
 
-1.0.24 - Released 14-Feb-2012
---------------------------------
-- Fix playlist browsing with no SortOrder specified.
-- Fix inotify detection of caption file removal.
-- Handle an empty DeviceID from Zyxel media player SOAP request.
-- Fix false positives in playlist caching optimization when we have duplicate file names in different directories.
-- Trim the camera model name extracted from EXIF tags.
-- Add support for user-configurable log level settings.
-- Add DLNA.ORG_FLAGS support.
+  <script type="module">
+    import { Scene, Viewer, WebGLRenderer, USDZLoader } from 'https://cdn.jsdelivr.net/npm/@xeokit/sdk@0.1.0/dist/xeokit-sdk.es.js';
 
-1.0.23 - Released 23-Jan-2012
---------------------------------
-- Enable the subtitle menu on some Samsung TV's.
-- Add subtitle support for Panasonic TV's.
-- Add workarounds for LifeTab tablets' bad behavior.
-- Speed up playlist parsing.
-- Make metadata-based virtual containers case insensitive.
-- Add folder art support (very few clients support this though).
-- Improve trimming of quotation marks.
-- Fix SRT caption support with the latest Samsung Series D firmware.
-- Fix subtitles on LG TV's for items whose titles don't have a dot in them.
-- Add support for the av:mediaClass tag, so some Sony devices can filter items by media type.
-- Fix inotify detection issues on first-level folders.
-- Work around LifeTab's broken DLNA support.
-- Add image rotation support during resize. (mostly useful for TiVo)
+    const canvas = document.getElementById('myCanvas');
+    const loading = document.getElementById('loading');
+    const barfill = document.getElementById('barfill');
+    const loadmsg = document.getElementById('loadmsg');
+    const errorBox = document.getElementById('error');
+    const speedEl = document.getElementById('speed');
+    const modeEl = document.getElementById('mode');
 
-1.0.22 - Released 24-Aug-2011
---------------------------------
-- Add bookmark support for some Samsung TV's.
-- Fix a memory leak when certain model Samsung TV's or Roku devices are on the network.
-- Fix detection of Samsung Series D models.
-- Add WAV MIME workaround for Marantz Receivers and Roku SoundBridge.
-- Fix bitrate displayed on Microsoft PFS devices.
-- Fix a scanner crash when trying to scan image files with no read access.
+    const state = {
+      pos: [0, 4, 12],
+      vel: [0, 0, 0],
+      yaw: Math.PI,
+      pitch: -0.14,
+      grounded: false,
+      swing: false,
+      zip: false,
+      anchor: null,
+      lastWebAt: 0,
+      cameraEye: [0, 0, 0],
+      cameraLook: [0, 0, 0],
+      mouseLocked: false,
+      loadedCity: null,
+      loadedPlayer: null,
+      playerMeshes: [],
+      webLines: [],
+      anchorMeshes: [],
+      started: false,
+      accumulator: 0,
+      lastTime: performance.now()
+    };
 
-1.0.21 - Released 18-July-2011
---------------------------------
-- Fix a few issues with new libav/ffmpeg versions.
-- Fix FF/REW of AVI files on Samsung Series B TV's.
-- Fix a crash bug when playing music on TiVo.
-- Add the ability to change the root media container.
-- Add WAV/RIFF INFO tag parsing support for the most common tags.
-- Fix a crash bug with clients that request a large number of results.
+    const keys = new Set();
+    const tmp = {f:[0,0,0], r:[0,0,0], target:[0,0,0]};
 
-1.0.20 - Released 09-June-2011
---------------------------------
-- Fix a crash bug when scanning MPEG-TS files with odd packet sizes.
-- Fix AVI file streaming on Samsung A-Series TV's.
-- Improve support for the NETGEAR Digital Entertainer Live (EVA2000).
-- Add support for multiple network interfaces.
-- Add subtitle support for LG TV's and Blu-Ray players.
-- Fix some minor coding issues found by cppcheck.
-- Add client adaptation support for Toshiba Regza TV's.
-- Send known audio-only devices straight to the Music section on root requests.
-- Add client adaptation support for Roku SoundBridge audio clients.
-- Improve Sony client adaptation to allow support for more file types.
-- Add support for reading tags from MP4 video files with recent lavf versions.
-- Add support for Samsung's GetFeatureList method.
+    function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+    function add(a,b){ return [a[0]+b[0],a[1]+b[1],a[2]+b[2]]; }
+    function sub(a,b){ return [a[0]-b[0],a[1]-b[1],a[2]-b[2]]; }
+    function mul(a,s){ return [a[0]*s,a[1]*s,a[2]*s]; }
+    function len(a){ return Math.hypot(a[0],a[1],a[2]); }
+    function norm(a){ const l=len(a)||1; return [a[0]/l,a[1]/l,a[2]/l]; }
+    function lerp(a,b,t){ return a+(b-a)*t; }
 
-1.0.19 - Released 11-Mar-2011
---------------------------------
-- When called with -R, only remove art_cache and files.db in case users use an
-  imporant directory as their db dir.
-- Properly scan newly created directory symlinks.
-- Improve Windows 7 interoperability.
-- Add basic NLS support, so clients can display localized strings.
-- Optimize JPEG scaling by downscaling as much as possible during decompression.
+    function forwardDir(){
+      const cp=Math.cos(state.pitch), sp=Math.sin(state.pitch), sy=Math.sin(state.yaw), cy=Math.cos(state.yaw);
+      return [sy*cp, sp, cy*cp];
+    }
+    function planarForward(){
+      const sy=Math.sin(state.yaw), cy=Math.cos(state.yaw);
+      return [sy,0,cy];
+    }
+    function rightDir(){
+      const f=planarForward(); return [f[2],0,-f[0]];
+    }
+
+    function setProgress(v,msg){barfill.style.width = Math.round(v*100)+'%'; loadmsg.textContent = msg;}
+
+    async function loadModel(path,id){
+      const modelRes = state.scene.createModel({id});
+      if(!modelRes.ok) throw new Error(modelRes.error || 'Failed to create SceneModel '+id);
+      const model = modelRes.value;
+      const bytes = await fetch(path).then(r=>{ if(!r.ok) throw new Error(`HTTP ${r.status} while loading ${path}`); return r.arrayBuffer(); });
+      await new USDZLoader().load({fileData:bytes, sceneModel:model});
+      return model;
+    }
+
+    function moveModelMeshes(model, offset){
+      if(!model || !model.meshes) return;
+      for(const id of Object.keys(model.meshes)){
+        const m=model.meshes[id];
+        const p=m.offset || [0,0,0];
+        m.offset=[p[0]+offset[0],p[1]+offset[1],p[2]+offset[2]];
+      }
+    }
+
+    function rotatePlayer(yaw){
+      for(const m of state.playerMeshes){
+        m.rotation=[0, -yaw*180/Math.PI, 0];
+      }
+    }
+
+    function applyPlayerPose(){
+      if(!state.loadedPlayer) return;
+      const base=state.loadedPlayer.__initialOffsets || {};
+      for(const id of Object.keys(state.loadedPlayer.meshes||{})){
+        const m=state.loadedPlayer.meshes[id];
+        const p=base[id] || [0,0,0];
+        m.offset=[p[0]+state.pos[0],p[1]+state.pos[1],p[2]+state.pos[2]];
+        m.rotation=[0,-state.yaw*180/Math.PI,0];
+      }
+    }
+
+    function makeInitialOffsets(model){
+      const out={};
+      for(const id of Object.keys(model.meshes||{})){
+        const p=model.meshes[id].offset || [0,0,0];
+        out[id]=[p[0],p[1],p[2]];
+      }
+      model.__initialOffsets=out;
+    }
+
+    function playerAnchor(){
+      return [state.pos[0], state.pos[1]+1.0, state.pos[2]];
+    }
+
+    function findWebAnchor(){
+      // Deterministic gameplay anchor: cast the aim direction forward and slightly up.
+      // This keeps the prototype responsive even when the city has no semantic metadata.
+      const o=playerAnchor();
+      const d=forwardDir();
+      return add(o,mul(d,65));
+    }
+
+    function setWeb(anchor){
+      state.anchor=anchor;
+      state.swing=true;
+      state.zip=false;
+      state.lastWebAt=performance.now();
+      modeEl.textContent='WEB ATTACHED';
+    }
+
+    function releaseWeb(){ state.swing=false; state.zip=false; state.anchor=null; modeEl.textContent='AIR'; }
+
+    function shootWeb(){
+      const now=performance.now();
+      if(now-state.lastWebAt<110) return;
+      if(!state.swing){ setWeb(findWebAnchor()); }
+      else { releaseWeb(); }
+      state.lastWebAt=now;
+    }
+
+    function doZip(){
+      const a=findWebAnchor();
+      state.anchor=a;
+      state.swing=false;
+      state.zip=true;
+      modeEl.textContent='ZIP BOOST';
+      const o=playerAnchor();
+      const d=norm(sub(a,o));
+      const speed=95;
+      state.vel[0]=d[0]*speed;
+      state.vel[1]=d[1]*speed;
+      state.vel[2]=d[2]*speed;
+    }
+
+    function restart(){
+      state.pos=[0,4,12]; state.vel=[0,0,0]; state.yaw=Math.PI; state.pitch=-0.14; releaseWeb();
+      modeEl.textContent='AIR';
+    }
+
+    function simulate(dt){
+      const f=planarForward(), r=rightDir();
+      let ix=0, iz=0;
+      if(keys.has('w')){ ix+=f[0]; iz+=f[2]; }
+      if(keys.has('s')){ ix-=f[0]; iz-=f[2]; }
+      if(keys.has('d')){ ix+=r[0]; iz+=r[2]; }
+      if(keys.has('a')){ ix-=r[0]; iz-=r[2]; }
+      const inputLen=Math.hypot(ix,iz)||1;
+      ix/=inputLen; iz/=inputLen;
+      const accelerating = (keys.has('w')||keys.has('a')||keys.has('s')||keys.has('d'));
+      const targetSpeed = state.grounded ? 15 : 23;
+      const accel = state.grounded ? 42 : 28;
+      if(accelerating){
+        state.vel[0]=lerp(state.vel[0],ix*targetSpeed,1-Math.exp(-accel*dt));
+        state.vel[2]=lerp(state.vel[2],iz*targetSpeed,1-Math.exp(-accel*dt));
+      }else{
+        state.vel[0]=lerp(state.vel[0],0,1-Math.exp(-7*dt));
+        state.vel[2]=lerp(state.vel[2],0,1-Math.exp(-7*dt));
+      }
+
+      if(state.swing && state.anchor){
+        const p=playerAnchor();
+        const toA=sub(state.anchor,p);
+        const dist=len(toA);
+        const radial=norm(toA);
+        // Gravity plus tangential preservation creates a controllable pendulum.
+        state.vel[1]-=22*dt;
+        const radialSpeed=state.vel[0]*radial[0]+state.vel[1]*radial[1]+state.vel[2]*radial[2];
+        state.vel[0]-=radial[0]*radialSpeed*0.9;
+        state.vel[1]-=radial[1]*radialSpeed*0.9;
+        state.vel[2]-=radial[2]*radialSpeed*0.9;
+        if(dist>54){
+          const pull=clamp((dist-54)*9,0,65);
+          state.vel[0]+=radial[0]*pull*dt;
+          state.vel[1]+=radial[1]*pull*dt;
+          state.vel[2]+=radial[2]*pull*dt;
+        }
+        if(accelerating){
+          state.vel[0]+=ix*11*dt; state.vel[2]+=iz*11*dt;
+        }
+      } else {
+        state.vel[1]-=20*dt;
+      }
+
+      if(state.zip){
+        if(state.anchor){
+          const d=norm(sub(state.anchor,playerAnchor()));
+          const speed=len(state.vel);
+          state.vel[0]=lerp(state.vel[0],d[0]*Math.max(speed,75),1-Math.exp(-10*dt));
+          state.vel[1]=lerp(state.vel[1],d[1]*Math.max(speed,75),1-Math.exp(-10*dt));
+          state.vel[2]=lerp(state.vel[2],d[2]*Math.max(speed,75),1-Math.exp(-10*dt));
+        }
+        if(len(state.vel)>110) state.zip=false;
+      }
+
+      state.pos[0]+=state.vel[0]*dt;
+      state.pos[1]+=state.vel[1]*dt;
+      state.pos[2]+=state.vel[2]*dt;
+
+      // Ground plane / safety reset. This is intentionally forgiving for a prototype city with unknown collision metadata.
+      if(state.pos[1]<0){
+        state.pos[1]=0; if(state.vel[1]<0) state.vel[1]*=-0.2;
+        state.grounded=true;
+      } else state.grounded=false;
+
+      if(Math.abs(state.pos[0])>5000 || Math.abs(state.pos[2])>5000 || state.pos[1]<-100){ restart(); }
+
+      // keep model and camera coupled
+      applyPlayerPose();
+      const speed=len(state.vel)*3.6;
+      speedEl.textContent=Math.round(speed)+' km/h';
+    }
+
+    function updateCamera(dt){
+      const f=forwardDir();
+      const right=rightDir();
+      const anchor=playerAnchor();
+      const followDist= state.zip ? 11 : (state.swing ? 9 : 7.5);
+      const followHeight= state.swing ? 2.8 : 3.2;
+      const desiredEye=[
+        anchor[0]-f[0]*followDist+right[0]*0.9,
+        anchor[1]-f[1]*followDist+followHeight,
+        anchor[2]-f[2]*followDist+right[2]*0.9,
+      ];
+      const desiredLook=[anchor[0]+f[0]*16,anchor[1]+f[1]*10,anchor[2]+f[2]*16];
+      const a=1-Math.exp(-12*dt);
+      for(let i=0;i<3;i++){ state.cameraEye[i]=lerp(state.cameraEye[i],desiredEye[i],a); state.cameraLook[i]=lerp(state.cameraLook[i],desiredLook[i],a); }
+      state.view.camera.eye=state.cameraEye;
+      state.view.camera.look=state.cameraLook;
+      state.view.camera.up=[0,1,0];
+    }
+
+    function updateWebVisuals(){
+      // Renderers/SceneModels remain authoritative; web visuals use a lightweight persistent mesh set.
+      // We create web geometry as SceneModels once and then transform their meshes in-place.
+      if(!state.webModel || !state.anchorModel) return;
+      const o=playerAnchor(), a=state.anchor || add(o,mul(forwardDir(),2));
+      const p=state.webModel.meshes && Object.values(state.webModel.meshes)[0];
+      const ap=state.anchorModel.meshes && Object.values(state.anchorModel.meshes)[0];
+      if(p){
+        const mid=[(o[0]+a[0])/2,(o[1]+a[1])/2,(o[2]+a[2])/2];
+        const d=sub(a,o); const L=Math.max(0.02,len(d));
+        p.position=mid; p.scale=[0.06,0.06,L];
+      }
+      if(ap){ ap.position=a; ap.scale=[state.swing||state.zip?0.22:0.08,state.swing||state.zip?0.22:0.08,state.swing||state.zip?0.22:0.08]; }
+    }
+
+    async function boot(){
+      try{
+        setProgress(.08,'Creating renderer…');
+        state.scene=new Scene();
+        state.viewer=new Viewer({scene:state.scene});
+        state.renderer=new WebGLRenderer({viewer:state.viewer});
+        const vr=state.viewer.createView({id:'game',elementId:'myCanvas'});
+        if(!vr.ok) throw new Error(vr.error || 'Could not create view');
+        state.view=vr.value;
+        state.view.camera.eye=[0,6,30]; state.view.camera.look=[0,3,0]; state.view.camera.up=[0,1,0];
+
+        setProgress(.25,'Loading Bay City…');
+        state.loadedCity=await loadModel('assets/Bay_City.usdz','bayCity');
+        setProgress(.66,'Loading Brand New Day Spider-Man…');
+        state.loadedPlayer=await loadModel('assets/Spider-Man_Brand_New_Day.usdz','spiderMan');
+        makeInitialOffsets(state.loadedPlayer);
+        state.playerMeshes=Object.values(state.loadedPlayer.meshes||{});
+        setProgress(.82,'Preparing web effects…');
+
+        // Runtime web primitives: simple cube + anchor marker, independent of asset contents.
+        const web=state.scene.createModel({id:'webRuntime'}).value;
+        web.createGeometry({id:'g',primitive:'triangles',positions:[-1,-1,-1,1,-1,-1,1,1,-1,-1,1,-1,-1,-1,1,1,-1,1,1,1,1,-1,1,1],indices:[0,1,2,0,2,3,4,5,6,4,6,7,0,4,7,0,7,1,1,7,6,1,6,2,2,6,5,2,5,3,4,0,3,4,3,5]});
+        web.createMaterial({id:'m',color:[0.8,0.95,1],opacity:0.8,metallic:0.05,roughness:0.2});
+        web.createMesh({id:'mesh',geometryId:'g',materialId:'m',position:[0,-1000,0],scale:[1,1,1]});
+        state.webModel=web;
+        const anchor=state.scene.createModel({id:'anchorRuntime'}).value;
+        anchor.createGeometry({id:'g',primitive:'triangles',positions:[-1,-1,-1,1,-1,-1,1,1,-1,-1,1,-1,-1,-1,1,1,-1,1,1,1,1,-1,1,1],indices:[0,1,2,0,2,3,4,5,6,4,6,7,0,4,7,0,7,1,1,7,6,1,6,2,2,6,5,2,5,3,4,0,3,4,3,5]});
+        anchor.createMaterial({id:'m',color:[0.4,0.85,1],opacity:0.92,metallic:0.2,roughness:0.1});
+        anchor.createMesh({id:'mesh',geometryId:'g',materialId:'m',position:[0,-1000,0],scale:[.1,.1,.1]});
+        state.anchorModel=anchor;
+
+        restart();
+        applyPlayerPose();
+        state.cameraEye=[0,7,30]; state.cameraLook=[0,4,0];
+        updateWebVisuals();
+        setProgress(1,'Ready');
+        setTimeout(()=>loading.remove(),350);
+        requestAnimationFrame(frame);
+      }catch(err){
+        console.error(err);
+        errorBox.style.display='block';
+        errorBox.textContent='Game initialization failed.\n\n'+(err?.stack||err?.message||String(err));
+        loadmsg.textContent='Unable to start';
+      }
+    }
+
+    function frame(now){
+      const dt=Math.min(.033,Math.max(.001,(now-state.lastTime)/1000));
+      state.lastTime=now;
+      state.accumulator+=dt;
+      const fixed=1/120;
+      let steps=0;
+      while(state.accumulator>=fixed && steps<4){ simulate(fixed); state.accumulator-=fixed; steps++; }
+      updateCamera(dt);
+      updateWebVisuals();
+      requestAnimationFrame(frame);
+    }
+
+    window.addEventListener('keydown',e=>{
+      const k=e.key.toLowerCase();
+      if(['w','a','s','d','e','q','r',' '].includes(k)) e.preventDefault();
+      keys.add(k);
+      if(e.repeat) return;
+      if(k==='e') shootWeb();
+      if(k==='q') doZip();
+      if(k==='r') restart();
+    },{passive:false});
+    window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+    canvas.addEventListener('click',()=>{ canvas.requestPointerLock?.(); });
+    document.addEventListener('pointerlockchange',()=>{state.mouseLocked=(document.pointerLockElement===canvas);});
+    document.addEventListener('mousemove',e=>{
+      if(!state.mouseLocked) return;
+      state.yaw -= e.movementX*0.0026;
+      state.pitch = clamp(state.pitch - e.movementY*0.0021,-0.85,0.6);
+      rotatePlayer(state.yaw);
+    });
+    window.addEventListener('blur',()=>keys.clear());
+
+    boot();
+  </script>
+</body>
+</html>
+EOF
+cat > /mnt/data/spider_swing_game/README.md <<'EOF'
+# Bay City Web Swinger
+
+A browser-based 3D Spider-Man-inspired movement prototype using the supplied USDZ assets:
+
+- `assets/Bay_City.usdz` — city scene supplied by the user
+- `assets/Spider-Man_Brand_New_Day.usdz` — player model supplied by the user
+
+## Controls
+
+- Mouse — aim / third-person look (click the canvas first)
+- W / A / S / D — move
+- E — web attach / release
+- Q — zip: dual-web style forward boost
+- R — restart
+
+## Run
+
+Serve this folder over HTTP(S); do not use `file://` because the browser must fetch the USDZ files and the WebAssembly USD decoder.
+
+Examples:
+
+```bash
+python3 -m http.server 8080
+
+
